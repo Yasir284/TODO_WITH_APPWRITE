@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import axios from "axios";
-import AddTodo from "./modals/AddTodo";
 import { toast } from "react-toastify";
+
+import AddTodo from "./modals/AddTodo";
 
 import { MdAdd, MdCalendarToday, MdSearch } from "react-icons/md";
 
@@ -9,6 +10,12 @@ import ProgressBar from "./ProgressBar/ProgressBar";
 import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { UserContext } from "../context/UserContext";
+import { databases } from "../appwrite/appwriteConfig";
+import { v4 as uuidv4 } from "uuid";
+import { Query } from "appwrite";
+
+const DATABASE_ID = process.env.REACT_APP_DATABASE_ID;
+const TODO_COLLECTION_ID = process.env.REACT_APP_TODO_COLLECTION_ID;
 
 const containerVarient = {
   initial: { opacity: 0 },
@@ -22,22 +29,26 @@ const todoListvarient = {
 };
 
 export default function MainSection() {
-  const { isSignedIn, showLoader, hideLoader } = useContext(UserContext);
+  const { userInfo, showLoader, hideLoader } = useContext(UserContext);
   const [todos, setTodos] = useState(null);
   const [showAddTodo, setShowAddTodo] = useState(false);
   const searchRef = useRef();
 
   // Getting Todos
-  const getTodos = async () => {
-    const { data } = await axios
-      .get("/todo/getTodos")
-      .catch((error) => error.response);
-    console.log("todos response:", data);
+  const getTodos = async (userId) => {
+    const promise = databases.listDocuments(DATABASE_ID, TODO_COLLECTION_ID, [
+      Query.equal("userId", userId),
+    ]);
 
-    if (!data.success) {
-      return toast(data.message, { type: "error" });
-    }
-    setTodos(data.todos);
+    promise.then(
+      function (response) {
+        console.log(response.documents);
+        setTodos(response.documents);
+      },
+      function (error) {
+        console.log(error);
+      }
+    );
   };
 
   // Search Todo
@@ -48,29 +59,31 @@ export default function MainSection() {
     showLoader();
 
     if (!search || search === "") {
-      getTodos();
+      getTodos(userInfo.$id);
       return hideLoader();
     }
 
-    const { data } = await axios
-      .post("/todo/searchTodos", { search })
-      .catch((error) => error.response);
+    const promise = databases.listDocuments(DATABASE_ID, TODO_COLLECTION_ID, [
+      Query.search("title", search),
+    ]);
+
+    promise.then(
+      function (response) {
+        console.log(response.documents);
+        setTodos(response.documents);
+      },
+      function (error) {
+        console.log(error);
+        toast("Todo not found", { type: "info" });
+      }
+    );
 
     hideLoader();
-
-    if (!data.success) {
-      return toast("Todo not found", { type: "info" });
-    }
-
-    setTodos(data.todos);
   };
 
   useEffect(() => {
-    if (!isSignedIn) {
-      return;
-    }
-    getTodos();
-  }, [setTodos, isSignedIn]);
+    getTodos(userInfo.$id);
+  }, [userInfo]);
 
   return (
     <motion.div
@@ -116,14 +129,15 @@ export default function MainSection() {
           showAddTodo={showAddTodo}
           setShowAddTodo={setShowAddTodo}
           setTodos={setTodos}
-          todos={todos}
+          getTodos={getTodos}
+          todoId={uuidv4()}
         />
 
         {/* Todo List */}
-        {isSignedIn && todos && todos.length > 0 ? (
+        {todos && todos.length > 0 ? (
           <ul className="flex w-full flex-row flex-wrap justify-center gap-12">
             {todos.map((todo, i) => (
-              <NavLink key={i} to={`/tasks/${todo._id}`}>
+              <NavLink key={todo.$id} to={`/tasks/${todo.$id}`}>
                 <motion.li
                   {...todoListvarient}
                   layout
@@ -133,14 +147,11 @@ export default function MainSection() {
                     <div>
                       <h1 className="mb-5 text-2xl font-bold">{todo.title}</h1>
                       <p className="ml-2 mb-1">
-                        🚀 <span>{todo.tasks.length}</span> Tasks
+                        🚀 <span>10</span> Tasks
                       </p>
                       <p className="ml-2">
                         🔥
-                        <span>
-                          {todo.tasks.filter((e) => e.isCompleted).length}
-                        </span>{" "}
-                        Done
+                        <span>0</span> Done
                       </p>
 
                       <div
@@ -149,17 +160,18 @@ export default function MainSection() {
                       >
                         <MdCalendarToday />
                         <span>
-                          {new Date(todo.created_at).toDateString()}
+                          {new Date(todo.$createdAt).toDateString()}
                           {", "}
-                          {new Date(todo.created_at).toLocaleTimeString()}
+                          {new Date(todo.$createdAt).toLocaleTimeString()}
                         </span>
                       </div>
                     </div>
 
                     <ProgressBar
                       percentage={
-                        (todo.tasks.filter((e) => e.isCompleted).length * 100) /
-                        todo.tasks.length
+                        0
+                        // (todo.tasks.filter((e) => e.isCompleted).length * 100) /
+                        // todo.tasks.length
                       }
                     />
                   </div>

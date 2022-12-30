@@ -1,10 +1,16 @@
-import axios from "axios";
 import React, { useRef, useState, useContext } from "react";
 import { MdAdd, MdClose } from "react-icons/md";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { toast } from "react-toastify";
 import { AnimatePresence, motion } from "framer-motion";
 import { UserContext } from "../../context/UserContext";
+
+import { databases } from "../../appwrite/appwriteConfig";
+import { v4 as uuidv4 } from "uuid";
+
+const DATABASE_ID = process.env.REACT_APP_DATABASE_ID;
+const TODO_COLLECTION_ID = process.env.REACT_APP_TODO_COLLECTION_ID;
+const TASK_COLLECTION_ID = process.env.REACT_APP_TASK_COLLECTION_ID;
 
 const containerVarient = {
   initial: { opacity: 0, scale: 0 },
@@ -20,47 +26,79 @@ const containerVarient = {
   },
 };
 
-function AddTodo({ showAddTodo, setShowAddTodo, setTodos, todos }) {
+function AddTodo({ showAddTodo, setShowAddTodo, getTodos, todoId }) {
   const titleRef = useRef();
   const taskRef = useRef();
   const [tasks, setTasks] = useState([]);
-  const { showLoader, hideLoader } = useContext(UserContext);
+  const { userInfo, showLoader, hideLoader } = useContext(UserContext);
+  console.log("todoId:", todoId);
 
   // Create Todo
   const createTodo = async () => {
     const title = titleRef.current.value;
-    const data = {
-      title,
-      tasks,
-    };
-    console.log(data);
 
     showLoader();
 
-    const todo = await axios
-      .post("/todo/createTodo", data)
-      .catch((error) => error.response);
-    console.log(todo);
+    const promise = databases.createDocument(
+      DATABASE_ID,
+      TODO_COLLECTION_ID,
+      todoId,
+      { title, userId: userInfo.$id }
+    );
 
-    hideLoader();
+    promise
+      .then(
+        function (response) {
+          console.log(response);
+          titleRef.current.value = "";
+          taskRef.current.value = "";
+          getTodos();
+          toast("New todo added", { type: "info" });
+        },
+        function (error) {
+          console.log(error);
+          toast("Something went wrong", { type: "error" });
+          return;
+        }
+      )
+      .then(createTasks());
 
-    if (!todo.data.success) {
-      return toast(todo.data.message, { type: "error" });
-    }
-
-    setTodos([...todos, todo.data.todo]);
-
-    toast(todo.data.message, { type: "success" });
-
-    titleRef.current.value = "";
-    taskRef.current.value = "";
     setTasks([]);
+    hideLoader();
+  };
+
+  const createTasks = async () => {
+    if (tasks.length <= 0) return;
+
+    tasks.forEach(
+      (task) => {
+        const promise = databases.createDocument(
+          DATABASE_ID,
+          TASK_COLLECTION_ID,
+          uuidv4(),
+          task
+        );
+
+        promise.then(function (res) {
+          console.log(res);
+        });
+      },
+      function (err) {
+        console.log(err);
+      }
+    );
   };
 
   // Add Task
   const addTask = (e) => {
     e.preventDefault();
-    const newTask = { task: taskRef.current.value, taskCreatedAt: Date.now() };
+
+    console.log("TodoId in addtask():", todoId);
+    const newTask = {
+      task: taskRef.current.value,
+      userId: userInfo.$id,
+      todoId,
+    };
 
     if (!newTask.task) {
       return toast("Cann't add empty task", { type: "warning" });
@@ -96,7 +134,12 @@ function AddTodo({ showAddTodo, setShowAddTodo, setTodos, todos }) {
             </h1>
 
             <MdClose
-              onClick={() => setShowAddTodo(false)}
+              onClick={() => {
+                setTasks([]);
+                titleRef.current.value = "";
+                taskRef.current.value = "";
+                setShowAddTodo(false);
+              }}
               className="absolute top-6 right-8 active:scale-50"
               size="1.5rem"
             />

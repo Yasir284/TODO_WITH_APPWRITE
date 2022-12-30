@@ -5,7 +5,7 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { NavLink, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
-import { MdArrowBackIosNew, MdVerticalAlignBottom } from "react-icons/md";
+import { MdArrowBackIosNew } from "react-icons/md";
 import { useContext } from "react";
 import { UserContext } from "../context/UserContext";
 import { account } from "../appwrite/appwriteConfig";
@@ -28,6 +28,8 @@ function SignUp() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    showLoader();
+
     let name = nameRef.current.value;
     let email = emailRef.current.value;
     let password = passwordRef.current.value;
@@ -36,23 +38,19 @@ function SignUp() {
       return toast("All fields are mandatory", { type: "error" });
     }
 
-    showLoader();
-
-    const promise = await account
-      .create(uuidv4(), email, password, name)
-      .then((response) => {
+    try {
+      await account.create(uuidv4(), email, password, name).then((response) => {
         console.log(response);
         toast("Account created successfully", { type: "success" });
         nameRef.current.value = "";
         emailRef.current.value = "";
         passwordRef.current.value = "";
         navigate("/signIn");
-      })
-      .catch((err) => {
-        console.log(err);
-        toast("Something went wrong", { type: "error" });
       });
-
+    } catch (error) {
+      console.log(error);
+      toast("Something went wrong", { type: "error" });
+    }
     hideLoader();
   };
 

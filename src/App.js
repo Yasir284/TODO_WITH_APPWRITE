@@ -10,6 +10,7 @@ import { UserContext } from "./context/UserContext";
 
 // Components
 import Loader from "./components/modals/Loader";
+import { account } from "./appwrite/appwriteConfig";
 const MainSection = lazy(() => import("./components/MainSection"));
 const Navbar = lazy(() => import("./components/Navbar"));
 const SignIn = lazy(() => import("./components/SignIn"));
@@ -18,7 +19,6 @@ const TasksSection = lazy(() => import("./components/TasksSection"));
 
 function App() {
   const [theme, setTheme] = useState("dark");
-  const [isSignedIn, setIsSignedIn] = useState(null);
   const [userInfo, setUserInfo] = useState(null);
   const [loader, setLoader] = useState(false);
   const location = useLocation();
@@ -56,16 +56,23 @@ function App() {
   //   setIsSignedIn(true);
   // };
 
-  // useEffect(() => {
-  //   checkIsSignedIn();
-  // }, [setIsSignedIn]);
+  useEffect(() => {
+    try {
+      const getData = account.get();
+
+      getData.then((response) => {
+        console.log(response);
+        setUserInfo(response);
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }, []);
 
   return (
     <>
       <UserContext.Provider
         value={{
-          isSignedIn,
-          setIsSignedIn,
           userInfo,
           setUserInfo,
           showLoader,

@@ -18,11 +18,12 @@ function SignIn() {
   const emailRef = useRef();
   const passwordRef = useRef();
   const [showPass, setShowPass] = useState(false);
-  const { setIsSignedIn, setUserInfo, showLoader, hideLoader } =
-    useContext(UserContext);
+  const { showLoader, hideLoader } = useContext(UserContext);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    showLoader();
 
     let email = emailRef.current.value;
     let password = passwordRef.current.value;
@@ -31,24 +32,22 @@ function SignIn() {
       return toast("All fields are mandatory", { type: "error" });
     }
 
-    showLoader();
-
-    await account
-      .createEmailSession(email, password)
-      .then((response) => {
+    try {
+      await account.createEmailSession(email, password).then((response) => {
         console.log(response);
 
         emailRef.current.value = "";
         passwordRef.current.value = "";
 
         toast("Logged in successfully", { type: "success" });
+        hideLoader();
         navigate("/");
         window.location.reload();
-      })
-      .catch((err) => {
-        console.log(err);
-        toast(err.message, { type: "error" });
       });
+    } catch (err) {
+      console.log(err);
+      toast(err.message, { type: "error" });
+    }
 
     hideLoader();
 
@@ -93,7 +92,7 @@ function SignIn() {
               type={showPass ? "text" : "password"}
               name="password"
               placeholder="Enter password"
-              className="bg-white text-black dark:bg-black-500 dark:text-white"
+              className="bg-[#e8f0fe] text-black "
             />
             {showPass ? (
               <FaEye

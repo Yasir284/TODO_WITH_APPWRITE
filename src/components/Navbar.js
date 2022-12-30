@@ -1,14 +1,11 @@
 import React, { useContext } from "react";
-import { NavLink } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
-import { UserContext } from "../context/UserContext";
 import logo from "../images/homework.png";
 import UserProfile from "./UserProfile";
 
 function Navbar() {
   const { theme, setTheme } = useContext(ThemeContext);
 
-  const { isSignedIn } = useContext(UserContext);
   return (
     <nav className="sticky top-0 right-0 z-40 backdrop-blur-sm backdrop-filter">
       <div className="border-b-2 bg-violet-800 bg-opacity-20 px-6 py-4 text-violet-600 dark:border-black-500 dark:bg-black dark:bg-opacity-10 dark:text-white xs:px-12 xs:py-4">
@@ -47,22 +44,7 @@ function Navbar() {
               </div>
             </li>
 
-            {isSignedIn ? (
-              <UserProfile />
-            ) : (
-              <>
-                <NavLink to="/signUp">
-                  <li className="font-semibold transition-all duration-200 ease-in-out active:scale-50">
-                    Sign up
-                  </li>
-                </NavLink>
-                <NavLink to="/signIn">
-                  <li className="rounded-3xl bg-white px-4 py-2  font-semibold transition-all duration-200 ease-in-out active:scale-50 dark:bg-violet-600">
-                    Sign in
-                  </li>
-                </NavLink>
-              </>
-            )}
+            <UserProfile />
           </ul>
         </div>
       </div>
