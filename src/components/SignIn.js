@@ -1,11 +1,11 @@
 import React, { useRef, useState, useContext } from "react";
-import axios from "axios";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { NavLink, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { MdArrowBackIosNew } from "react-icons/md";
 import { UserContext } from "../context/UserContext";
 import { motion } from "framer-motion";
+import { account } from "../appwrite/appwriteConfig";
 
 const containerVarient = {
   initial: { opacity: 0 },
@@ -31,37 +31,29 @@ function SignIn() {
       return toast("All fields are mandatory", { type: "error" });
     }
 
-    const data = {
-      email,
-      password,
-    };
-
     showLoader();
 
-    const request = await axios.post("todo/u/signIn", data).catch((error) => {
-      return error.response;
-    });
-    console.log(request);
+    await account
+      .createEmailSession(email, password)
+      .then((response) => {
+        console.log(response);
+
+        emailRef.current.value = "";
+        passwordRef.current.value = "";
+
+        toast("Logged in successfully", { type: "success" });
+        navigate("/");
+        window.location.reload();
+      })
+      .catch((err) => {
+        console.log(err);
+        toast(err.message, { type: "error" });
+      });
 
     hideLoader();
 
-    if (!request.data.success) {
-      return toast(request.data.message, { type: "error" });
-    }
-
-    toast(request.data.message, { type: "success" });
-
-    let token = "Bearer " + request.data.token;
-
-    sessionStorage.setItem("bearerToken", token);
-
-    setIsSignedIn(true);
-    setUserInfo(request.data.user);
-    emailRef.current.value = "";
-    passwordRef.current.value = "";
-
-    navigate("/");
-    window.location.reload();
+    // setIsSignedIn(true);
+    // setUserInfo(request.data.user);
   };
 
   return (
