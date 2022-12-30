@@ -36,28 +36,24 @@ function SignUp() {
       return toast("All fields are mandatory", { type: "error" });
     }
 
+    showLoader();
+
     const promise = await account
       .create(uuidv4(), email, password, name)
-      .catch((err) => console.log(err));
-    console.log(promise);
-    // promise.then(
-    //   function (response) {
-    //     console.log(response);
-    //     nameRef.current.value = "";
-    //     emailRef.current.value = "";
-    //     passwordRef.current.value = "";
-    //     navigate("/signIn");
-    //   },
-    //   function (error) {
-    //     console.log(error);
-    //   }
-    // );
+      .then((response) => {
+        console.log(response);
+        toast("Account created successfully", { type: "success" });
+        nameRef.current.value = "";
+        emailRef.current.value = "";
+        passwordRef.current.value = "";
+        navigate("/signIn");
+      })
+      .catch((err) => {
+        console.log(err);
+        toast("Something went wrong", { type: "error" });
+      });
 
-    // if (!creatUser.data.success) {
-    //   return toast(creatUser.data.message, { type: "error" });
-    // }
-
-    // toast(creatUser.data.message, { type: "success" });
+    hideLoader();
   };
 
   return (
