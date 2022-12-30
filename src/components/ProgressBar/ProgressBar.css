@@ -1,0 +1,11 @@
+/* Progress bar */
+circle {
+  fill: none;
+  stroke: url(#GradientColor);
+  animation: progress 2s linear forwards;
+}
+/* @keyframes progress {
+  100% {
+    stroke-dashoffset: 0;
+  }
+} */
