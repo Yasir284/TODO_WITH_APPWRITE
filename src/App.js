@@ -1,6 +1,6 @@
 import React, { useEffect, useState, lazy, Suspense } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
+import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AnimatePresence } from "framer-motion";
 
@@ -39,22 +39,6 @@ function App() {
   const hideLoader = () => {
     setLoader(false);
   };
-
-  // Check if user is signed in
-  // const checkIsSignedIn = async () => {
-  //   const { data } = await axios
-  //     .get("/todo/u/isSignedIn")
-  //     .catch((error) => error.response);
-  //   console.log("signIn response:", data);
-
-  //   if (!data.success) {
-  //     setIsSignedIn(false);
-  //     return toast("Sign in/Sign up first", { type: "warning" });
-  //   }
-
-  //   setUserInfo(data.user);
-  //   setIsSignedIn(true);
-  // };
 
   useEffect(() => {
     try {
@@ -95,7 +79,7 @@ function App() {
                 <Route path="/" element={<MainSection />} />
                 <Route path="/signUp" element={<SignUp />} />
                 <Route path="/signIn" element={<SignIn />} />
-                <Route path="/tasks/:todoId" element={<TasksSection />} />
+                <Route path="/tasks" element={<TasksSection />} />
               </Routes>
             </Suspense>
           </AnimatePresence>

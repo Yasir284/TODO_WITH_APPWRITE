@@ -1,9 +1,12 @@
 import React, { useContext, useRef } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { MdClose } from "react-icons/md";
 import { AnimatePresence, motion } from "framer-motion";
 import { UserContext } from "../../context/UserContext";
+import { databases } from "../../appwrite/appwriteConfig";
+
+const DATABASE_ID = process.env.REACT_APP_DATABASE_ID;
+const TASK_COLLECTION_ID = process.env.REACT_APP_TASK_COLLECTION_ID;
 
 const containerVarient = {
   initial: { opacity: 0, scale: 0 },
@@ -19,8 +22,7 @@ const containerVarient = {
   },
 };
 
-function UpdateTask({ setUpdateModal, updateModal, todoId, todoById }) {
-  console.log(updateModal);
+function UpdateTask({ setUpdateModal, updateModal, state, getTasks }) {
   const editTaskRef = useRef();
   const { showLoader, hideLoader } = useContext(UserContext);
 
@@ -28,27 +30,34 @@ function UpdateTask({ setUpdateModal, updateModal, todoId, todoById }) {
   const editTask = async () => {
     const newTask = editTaskRef.current.value;
 
-    if (!newTask) {
-      return toast("Add task first", { type: "warning" });
-    }
-
     showLoader();
 
-    const { data } = await axios
-      .put(`/todo/tasks/updateTask/${updateModal.taskId}`, {
-        task: newTask,
-      })
-      .catch((error) => error.response);
-
-    hideLoader();
-
-    if (!data.success) {
-      return toast(data.message, { type: "error" });
+    if (!newTask) {
+      toast("Add task first", { type: "warning" });
+      return hideLoader();
     }
 
-    todoById(todoId);
-    setUpdateModal({ active: false, taskId: null });
-    toast("Task edited successfully", { type: "info" });
+    const promise = databases.updateDocument(
+      DATABASE_ID,
+      TASK_COLLECTION_ID,
+      updateModal.taskId,
+      { task: newTask }
+    );
+
+    promise.then(
+      function (response) {
+        console.log(response);
+        getTasks(state);
+        setUpdateModal({ active: false, taskId: null });
+        toast("Task edited successfully", { type: "info" });
+      },
+      function (error) {
+        console.log(error);
+        toast("Cann't update task", { type: "error" });
+      }
+    );
+
+    hideLoader();
   };
 
   return (

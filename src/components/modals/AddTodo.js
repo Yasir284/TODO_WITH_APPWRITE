@@ -35,9 +35,13 @@ function AddTodo({ showAddTodo, setShowAddTodo, getTodos, todoId }) {
 
   // Create Todo
   const createTodo = async () => {
+    showLoader();
     const title = titleRef.current.value;
 
-    showLoader();
+    if (!title || title === "") {
+      toast("Cann't create empty todo", { type: "warning" });
+      return hideLoader();
+    }
 
     const promise = databases.createDocument(
       DATABASE_ID,
@@ -46,24 +50,24 @@ function AddTodo({ showAddTodo, setShowAddTodo, getTodos, todoId }) {
       { title, userId: userInfo.$id }
     );
 
-    promise
-      .then(
-        function (response) {
-          console.log(response);
-          titleRef.current.value = "";
-          taskRef.current.value = "";
-          getTodos();
-          toast("New todo added", { type: "info" });
-        },
-        function (error) {
-          console.log(error);
-          toast("Something went wrong", { type: "error" });
-          return;
-        }
-      )
-      .then(createTasks());
+    promise.then(
+      function (response) {
+        console.log(response);
+        createTasks();
+        getTodos(userInfo);
 
-    setTasks([]);
+        titleRef.current.value = "";
+        taskRef.current.value = "";
+        setTasks([]);
+        toast("New todo added", { type: "info" });
+      },
+      function (error) {
+        console.log(error);
+        toast("Something went wrong", { type: "error" });
+        return;
+      }
+    );
+
     hideLoader();
   };
 

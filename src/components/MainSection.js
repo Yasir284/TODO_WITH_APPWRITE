@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 
 import AddTodo from "./modals/AddTodo";
@@ -7,7 +6,7 @@ import AddTodo from "./modals/AddTodo";
 import { MdAdd, MdCalendarToday, MdSearch } from "react-icons/md";
 
 import ProgressBar from "./ProgressBar/ProgressBar";
-import { NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { UserContext } from "../context/UserContext";
 import { databases } from "../appwrite/appwriteConfig";
@@ -16,6 +15,7 @@ import { Query } from "appwrite";
 
 const DATABASE_ID = process.env.REACT_APP_DATABASE_ID;
 const TODO_COLLECTION_ID = process.env.REACT_APP_TODO_COLLECTION_ID;
+const TASK_COLLECTION_ID = process.env.REACT_APP_TASK_COLLECTION_ID;
 
 const containerVarient = {
   initial: { opacity: 0 },
@@ -33,11 +33,12 @@ export default function MainSection() {
   const [todos, setTodos] = useState(null);
   const [showAddTodo, setShowAddTodo] = useState(false);
   const searchRef = useRef();
+  const navigate = useNavigate();
 
   // Getting Todos
-  const getTodos = async (userId) => {
+  const getTodos = async (userInfo) => {
     const promise = databases.listDocuments(DATABASE_ID, TODO_COLLECTION_ID, [
-      Query.equal("userId", userId),
+      Query.equal("userId", userInfo.$id),
     ]);
 
     promise.then(
@@ -59,7 +60,7 @@ export default function MainSection() {
     showLoader();
 
     if (!search || search === "") {
-      getTodos(userInfo.$id);
+      getTodos(userInfo);
       return hideLoader();
     }
 
@@ -70,7 +71,11 @@ export default function MainSection() {
     promise.then(
       function (response) {
         console.log(response.documents);
-        setTodos(response.documents);
+        let data = response.documents.filter(
+          (todo) => todo.userId === userInfo.$id
+        );
+
+        setTodos(data);
       },
       function (error) {
         console.log(error);
@@ -81,8 +86,26 @@ export default function MainSection() {
     hideLoader();
   };
 
+  // Get tasks
+  // const getTasksInfo = async (state) => {
+  //   const promise = databases.listDocuments(DATABASE_ID, TASK_COLLECTION_ID, [
+  //     Query.equal("todoId", state.todoId),
+  //   ]);
+
+  //   promise.then(
+  //     function (response) {
+  //       console.log(response.documents);
+
+  //     },
+  //     function (error) {
+  //       console.log(error);
+  //       toast("Not able to get tasks", { type: "error" });
+  //     }
+  //   );
+  // };
+
   useEffect(() => {
-    getTodos(userInfo.$id);
+    getTodos(userInfo);
   }, [userInfo]);
 
   return (
@@ -137,46 +160,55 @@ export default function MainSection() {
         {todos && todos.length > 0 ? (
           <ul className="flex w-full flex-row flex-wrap justify-center gap-12">
             {todos.map((todo, i) => (
-              <NavLink key={todo.$id} to={`/tasks/${todo.$id}`}>
-                <motion.li
-                  {...todoListvarient}
-                  layout
-                  className="text-violet-700 dark:text-white"
-                >
-                  <div className="flex w-[80vw] flex-row justify-between rounded-3xl bg-violet-100 p-6 shadow-xl shadow-slate-300 dark:bg-black-700 dark:shadow-black xs:w-auto xs:gap-12 xs:p-10">
-                    <div>
-                      <h1 className="mb-5 text-2xl font-bold">{todo.title}</h1>
-                      <p className="ml-2 mb-1">
-                        🚀 <span>10</span> Tasks
-                      </p>
-                      <p className="ml-2">
-                        🔥
-                        <span>0</span> Done
-                      </p>
+              <motion.li
+                key={i}
+                onClick={() =>
+                  navigate("/tasks", {
+                    state: {
+                      todoTitle: todo.title,
+                      todoId: todo.$id,
+                      theme: todo.todoTheme,
+                    },
+                  })
+                }
+                {...todoListvarient}
+                layout
+                title="Click to see tasks"
+                className="cursor-pointer text-violet-700 dark:text-white"
+              >
+                <div className="flex w-[80vw] flex-row justify-between rounded-3xl bg-violet-100 p-6 shadow-xl shadow-slate-300 dark:bg-black-700 dark:shadow-black xs:w-auto xs:gap-12 xs:p-10">
+                  <div>
+                    <h1 className="mb-5 text-2xl font-bold">{todo.title}</h1>
+                    <p className="ml-2 mb-1">
+                      🚀 <span>10</span> Tasks
+                    </p>
+                    <p className="ml-2">
+                      🔥
+                      <span>0</span> Done
+                    </p>
 
-                      <div
-                        title="Created at"
-                        className="ml-2 mt-2 flex w-52 flex-row items-center gap-2 break-words border-t-2 border-slate-300 pt-2 dark:border-black-500 xs:w-64"
-                      >
-                        <MdCalendarToday />
-                        <span>
-                          {new Date(todo.$createdAt).toDateString()}
-                          {", "}
-                          {new Date(todo.$createdAt).toLocaleTimeString()}
-                        </span>
-                      </div>
+                    <div
+                      title="Created at"
+                      className="ml-2 mt-2 flex w-52 flex-row items-center gap-2 break-words border-t-2 border-slate-300 pt-2 dark:border-black-500 xs:w-64"
+                    >
+                      <MdCalendarToday />
+                      <span>
+                        {new Date(todo.$createdAt).toDateString()}
+                        {", "}
+                        {new Date(todo.$createdAt).toLocaleTimeString()}
+                      </span>
                     </div>
-
-                    <ProgressBar
-                      percentage={
-                        0
-                        // (todo.tasks.filter((e) => e.isCompleted).length * 100) /
-                        // todo.tasks.length
-                      }
-                    />
                   </div>
-                </motion.li>
-              </NavLink>
+
+                  <ProgressBar
+                    percentage={
+                      0
+                      // (todo.tasks.filter((e) => e.isCompleted).length * 100) /
+                      // todo.tasks.length
+                    }
+                  />
+                </div>
+              </motion.li>
             ))}
           </ul>
         ) : (

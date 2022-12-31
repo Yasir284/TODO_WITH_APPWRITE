@@ -1,6 +1,4 @@
-import axios from "axios";
-import React, { useState, useRef, useContext } from "react";
-import { useEffect } from "react";
+import React, { useState, useRef, useContext, useEffect } from "react";
 import { motion } from "framer-motion";
 import useMeasure from "react-use-measure";
 
@@ -23,10 +21,17 @@ import {
 } from "react-icons/md";
 import { BiInfoCircle } from "react-icons/bi";
 import { RiDeleteBin6Line, RiEditBoxLine } from "react-icons/ri";
-import { useNavigate, NavLink, useParams } from "react-router-dom";
+import { useNavigate, NavLink, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import UpdateTask from "./modals/UpdateTask";
 import { UserContext } from "../context/UserContext";
+import { databases } from "../appwrite/appwriteConfig";
+import { Query } from "appwrite";
+import { v4 as uuidv4 } from "uuid";
+
+const DATABASE_ID = process.env.REACT_APP_DATABASE_ID;
+const TODO_COLLECTION_ID = process.env.REACT_APP_TODO_COLLECTION_ID;
+const TASK_COLLECTION_ID = process.env.REACT_APP_TASK_COLLECTION_ID;
 
 const taskUlVarient = {
   initial: { opacity: 0 },
@@ -47,35 +52,40 @@ const containerVarient = {
 };
 
 export default function TasksSection() {
+  const location = useLocation();
+  const state = location.state;
+
+  const [title, setTitle] = useState(state.todoTitle);
   const [active, setActive] = useState(false);
   const [showInProgress, setShowInProgress] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
-  const [todo, setTodo] = useState(null);
+  const [tasks, setTasks] = useState(null);
   const [changeTitle, setChangeTitle] = useState(false);
-  const [todoTheme, setTodoTheme] = useState(null);
+  const [todoTheme, setTodoTheme] = useState(state.theme);
 
-  const { showLoader, hideLoader } = useContext(UserContext);
-
-  const { todoId } = useParams();
+  const { userInfo, showLoader, hideLoader } = useContext(UserContext);
 
   const taskRef = useRef();
   const titleRef = useRef();
   const searchRef = useRef();
   const navigate = useNavigate();
 
-  // Getting todo by id
-  const todoById = async (id) => {
-    const { data } = await axios
-      .get(`/todo/tasks/getTodoById/${id}`)
-      .catch((error) => error.response);
-    console.log("Todo by id :", data);
+  // Getting tasks by todo id
+  const getTasks = async (state) => {
+    const promise = databases.listDocuments(DATABASE_ID, TASK_COLLECTION_ID, [
+      Query.equal("todoId", state.todoId),
+    ]);
 
-    if (!data.success) {
-      return toast(data.message, { type: "error" });
-    }
-
-    setTodoTheme(data.todo[0].todoTheme);
-    setTodo(data.todo[0]);
+    promise.then(
+      function (response) {
+        console.log(response.documents);
+        setTasks(response.documents);
+      },
+      function (error) {
+        console.log(error);
+        toast("Not able to get tasks", { type: "error" });
+      }
+    );
   };
 
   // Rename todo
@@ -83,21 +93,29 @@ export default function TasksSection() {
     e.preventDefault();
 
     showLoader();
+    const promise = databases.updateDocument(
+      DATABASE_ID,
+      TODO_COLLECTION_ID,
+      state.todoId,
+      { title: titleRef.current.value }
+    );
 
-    const { data } = await axios
-      .put(`/todo/updateTodo/${todoId}`, { title: titleRef.current.value })
-      .catch((error) => error.response);
+    promise.then(
+      function (response) {
+        console.log(response);
+
+        setTitle(titleRef.current.value);
+        titleRef.current.value = "";
+        setChangeTitle(false);
+        toast("Title Updated", { type: "success" });
+      },
+      function (error) {
+        console.log(error);
+        toast("Failed to update title", { type: "error" });
+      }
+    );
 
     hideLoader();
-
-    if (!data.success) {
-      return toast("Failed to update title", { type: "error" });
-    }
-
-    todoById(todoId);
-    titleRef.current.value = "";
-    setChangeTitle(false);
-    toast("Title Updated", { type: "success" });
   };
 
   // Delete todo
@@ -110,96 +128,150 @@ export default function TasksSection() {
 
     showLoader();
 
-    const { data } = await axios
-      .delete(`/todo/deleteTodo/${todoId}`)
-      .catch((error) => error.response);
+    const promise = databases.deleteDocument(
+      DATABASE_ID,
+      TODO_COLLECTION_ID,
+      state.todoId
+    );
+
+    promise.then(
+      function (response) {
+        console.log(response);
+
+        deleteAllTasks();
+        toast("Todo deleted", { type: "info" });
+      },
+      function (error) {
+        console.log(error);
+        toast("Failed to delete todo", { type: "error" });
+      }
+    );
 
     hideLoader();
-
-    if (!data.success) {
-      return toast("Failed to delete todo", { type: "error" });
-    }
-
     navigate("/");
-    toast("Todo deleted", { type: "info" });
+    window.location.reload();
+  };
+
+  const deleteAllTasks = async () => {
+    if (tasks.length <= 0) return;
+
+    tasks.forEach(
+      (task) => {
+        const promise = databases.deleteDocument(
+          DATABASE_ID,
+          TASK_COLLECTION_ID,
+          task.$id
+        );
+
+        promise.then(function (res) {
+          console.log(res);
+        });
+      },
+      function (err) {
+        console.log(err);
+      }
+    );
   };
 
   // Add Task
   const addTask = async (e) => {
     e.preventDefault();
 
-    if (!taskRef.current.value) {
+    showLoader();
+
+    const task = taskRef.current.value;
+
+    if (!task) {
       return toast("Cann't add empty task", { type: "warning" });
     }
 
-    showLoader();
+    const promise = databases.createDocument(
+      DATABASE_ID,
+      TASK_COLLECTION_ID,
+      uuidv4(),
+      { task, userId: userInfo.$id, todoId: state.todoId }
+    );
 
-    const res = await axios
-      .put(`/todo/tasks/createTask/${todoId}`, { task: taskRef.current.value })
-      .catch((error) => error.response);
-    console.log(res);
+    promise.then(
+      function (response) {
+        console.log(response);
+
+        taskRef.current.value = "";
+        getTasks(state, userInfo);
+        toast("New todo added", { type: "info" });
+      },
+      function (error) {
+        console.log(error);
+        toast("Something went wrong", { type: "error" });
+      }
+    );
 
     hideLoader();
-
-    if (!res.data.success) {
-      return toast(res.data.message, { type: "error" });
-    }
-
-    todoById(todoId);
-    toast("Task added successfully", { type: "success" });
-
-    taskRef.current.value = "";
   };
 
   // Update Theme
   const updateTheme = async (theme) => {
     showLoader();
 
-    const res = await axios
-      .put(`/todo/updateTodo/${todoId}`, { todoTheme: theme })
-      .catch((error) => error.response);
-    console.log("updated theme:", res);
+    const promise = databases.updateDocument(
+      DATABASE_ID,
+      TODO_COLLECTION_ID,
+      state.todoId,
+      { todoTheme: theme }
+    );
+
+    promise.then(
+      function (response) {
+        console.log(response);
+        setTodoTheme(response.todoTheme);
+        toast("Todo theme changed", { type: "info" });
+      },
+      function (error) {
+        console.log(error);
+        toast("Failed to change theme", { type: "error" });
+      }
+    );
 
     hideLoader();
-
-    if (!res.data.success) {
-      return toast("Failed to change theme", { type: "error" });
-    }
-
-    setTodoTheme(theme);
-    todoById(todoId);
-    console.log(todo);
-
-    toast("Todo theme changed", { type: "info" });
   };
 
   // Search Todo
   const handleSearch = async (e) => {
     e.preventDefault();
-    let search = searchRef.current.value;
-
-    if (!search) {
-      return todoById(todoId);
-    }
 
     showLoader();
 
-    const { data } = await axios
-      .post(`/todo/tasks/searchTasks/${todoId}`, { search })
-      .catch((error) => error.response);
+    let search = searchRef.current.value;
 
-    hideLoader();
-
-    if (!data.success || data?.todo?.tasks?.length === 0) {
-      return toast("Task not found", { type: "info" });
+    if (!search || search === "") {
+      getTasks(state, userInfo.$id);
+      return hideLoader();
     }
 
-    setTodo(data.todo);
+    const promise = databases.listDocuments(DATABASE_ID, TASK_COLLECTION_ID, [
+      Query.search("task", search),
+    ]);
+
+    promise.then(
+      function (response) {
+        console.log(response.documents);
+        let data = response.documents.filter(
+          (task) => task.todoId === state.todoId
+        );
+        setTasks(data);
+      },
+      function (error) {
+        console.log(error);
+        toast("Task not found", { type: "info" });
+      }
+    );
+
+    hideLoader();
   };
 
   useEffect(() => {
-    todoById(todoId);
-  }, [todoId]);
+    getTasks(state);
+  }, [state]);
 
   const selectTheme = [
     {
@@ -211,11 +283,6 @@ export default function TasksSection() {
       style:
         "shadow-lg shadow-slate-400 dark:shadow-black active:scale-50 hover:scale-125 transition-all ease-in-out duration-200 w-6 h-6 rounded-full bg-red-600",
       changeTheme: () => updateTheme("red"),
-    },
-    {
-      style:
-        "shadow-lg shadow-slate-400 dark:shadow-black active:scale-50 hover:scale-125 transition-all ease-in-out duration-200 w-6 h-6 rounded-full bg-green-600",
-      changeTheme: () => updateTheme("green"),
     },
     {
       style:
@@ -257,7 +324,7 @@ export default function TasksSection() {
               </form>
             ) : (
               <h1 className="text-3xl font-extrabold">
-                {todo ? todo.title : "Title"}
+                {title ? title : "Title"}
               </h1>
             )}
 
@@ -294,7 +361,7 @@ export default function TasksSection() {
                   <span>Change Theme</span>
                   <MdKeyboardArrowRight size="1.2rem" />
 
-                  <div className="absolute top-12 -right-44 hidden cursor-pointer flex-row gap-4 rounded-md bg-white px-4 py-4 shadow-md shadow-slate-400 group-hover:flex dark:bg-black-700 dark:shadow-black">
+                  <div className="absolute top-12 -right-[136px] hidden cursor-pointer flex-row gap-4 rounded-md bg-white px-4 py-4 shadow-md shadow-slate-400 group-hover:flex dark:bg-black-700 dark:shadow-black">
                     {selectTheme.map(({ style, changeTheme }, index) => {
                       return (
                         <div
@@ -325,7 +392,6 @@ export default function TasksSection() {
               className="flex h-10 flex-row items-center gap-6 rounded-3xl bg-white px-4 shadow-md shadow-slate-200 dark:bg-black-700 dark:shadow-black"
             >
               <input
-                onChange={handleSearch}
                 ref={searchRef}
                 className="w-36 bg-transparent xs:w-40"
                 type="search"
@@ -367,26 +433,26 @@ export default function TasksSection() {
             />
             <p>In Progress</p>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs shadow-md shadow-slate-200 dark:bg-black-700 dark:shadow-black">
-              {todo ? todo.tasks.filter((e) => !e.isCompleted).length : 0}
+              {tasks ? tasks.filter((e) => !e.isCompleted).length : 0}
             </div>
           </div>
 
           <ResizeablePanel>
             {showInProgress ? (
               <motion.ul variants={taskUlVarient} className="my-6">
-                {todo && todo.tasks.length > 0
-                  ? todo.tasks
+                {tasks && tasks.length > 0
+                  ? tasks
                       .filter((e) => !e.isCompleted)
                       .sort(
                         (a, b) => Number(b.isImportant) - Number(a.isImportant)
                       )
-                      .map((e, i) => (
+                      .map((e) => (
                         <TaskList
-                          i={i}
                           e={e}
-                          todoById={todoById}
-                          todoId={todoId}
+                          getTasks={getTasks}
+                          todoId={state.todoId}
                           todoTheme={todoTheme}
+                          userId={userInfo.$id}
                         />
                       ))
                   : ""}
@@ -412,7 +478,7 @@ export default function TasksSection() {
             <p>Completed</p>
 
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs shadow-md shadow-slate-200 dark:bg-black-700 dark:shadow-black">
-              {todo ? todo.tasks.filter((e) => e.isCompleted).length : 0}
+              {tasks ? tasks.filter((e) => e.isCompleted).length : 0}
             </div>
           </div>
 
@@ -423,16 +489,16 @@ export default function TasksSection() {
                 variants={taskUlVarient}
                 className="my-6"
               >
-                {todo && todo.tasks.length > 0
-                  ? todo.tasks
+                {tasks && tasks.length > 0
+                  ? tasks
                       .filter((e) => e.isCompleted)
-                      .map((e, i) => (
+                      .map((e) => (
                         <TaskList
-                          i={i}
                           e={e}
-                          todoById={todoById}
-                          todoId={todoId}
+                          getTasks={getTasks}
+                          state={state}
                           todoTheme={todoTheme}
+                          userId={userInfo.$id}
                         />
                       ))
                   : ""}
@@ -466,7 +532,9 @@ function ResizeablePanel({ children }) {
 }
 
 // Task list items component
-function TaskList({ i, e, todoById, todoId, todoTheme }) {
+function TaskList({ e, getTasks, todoTheme }) {
+  const location = useLocation();
+  const state = location.state;
   const [ref, { height }] = useMeasure();
   const { showLoader, hideLoader } = useContext(UserContext);
   const [updateModal, setUpdateModal] = useState({
@@ -478,60 +546,82 @@ function TaskList({ i, e, todoById, todoId, todoTheme }) {
   const handleIsCompleted = async (isCompleted, taskId) => {
     showLoader();
 
-    const { data } = await axios
-      .put(`/todo/tasks/UpdateTask/${taskId}`, { isCompleted: !isCompleted })
-      .catch((error) => error.response);
+    const promise = databases.updateDocument(
+      DATABASE_ID,
+      TASK_COLLECTION_ID,
+      taskId,
+      { isCompleted: !isCompleted }
+    );
+
+    promise.then(
+      function (response) {
+        console.log("isCompleted res:", response);
+        getTasks(state);
+      },
+      function (error) {
+        console.log(error);
+        toast("Cann't update task", { type: "error" });
+      }
+    );
 
     hideLoader();
-
-    if (!data.success) {
-      return toast(data.message, { type: "error" });
-    }
-    todoById(todoId);
   };
 
   // Important Task
   const handleIsImportant = async (isImportant, taskId) => {
     showLoader();
 
-    const { data } = await axios
-      .put(`/todo/tasks/UpdateTask/${taskId}`, { isImportant: !isImportant })
-      .catch((error) => error.response);
+    const promise = databases.updateDocument(
+      DATABASE_ID,
+      TASK_COLLECTION_ID,
+      taskId,
+      { isImportant: !isImportant }
+    );
+
+    promise.then(
+      function (response) {
+        console.log(response);
+        getTasks(state);
+      },
+      function (error) {
+        console.log(error);
+        toast("Cann't update task", { type: "error" });
+      }
+    );
 
     hideLoader();
-
-    if (!data.success) {
-      return toast(data.message, { type: "error" });
-    }
-    todoById(todoId);
   };
 
   // Delete Task
   const deleteTask = async (taskId) => {
     showLoader();
+    const promise = databases.deleteDocument(
+      DATABASE_ID,
+      TASK_COLLECTION_ID,
+      taskId
+    );
 
-    const { data } = await axios
-      .delete(`/todo/tasks/deleteTask/${todoId}/${taskId}`)
-      .catch((error) => error.response);
-
+    promise.then(
+      function (response) {
+        console.log(response);
+        getTasks(state);
+      },
+      function (error) {
+        console.log(error);
+        toast("Cann't delete task", { type: "error" });
+      }
+    );
     hideLoader();
-
-    if (!data.success) {
-      return toast("Failed to delete task", { type: "error" });
-    }
-
-    todoById(todoId);
-    toast("Task deleted", { type: "info" });
   };
 
   return (
     <motion.li
-      key={e._id}
+      key={e.$id}
       animate={{
         height,
         transition: { ease: "easeOut", duration: 0.3 },
       }}
-      layoutId={e._id}
+      layoutId={e.$id}
       className="mb-3 rounded-md bg-white shadow-md shadow-slate-200 dark:bg-black-700 dark:shadow-black"
     >
       <motion.div ref={ref}>
@@ -543,13 +633,13 @@ function TaskList({ i, e, todoById, todoId, todoTheme }) {
           <div className="flex flex-row items-center gap-2">
             {e.isCompleted ? (
               <MdCheckCircle
-                onClick={() => handleIsCompleted(e.isCompleted, e._id)}
+                onClick={() => handleIsCompleted(e.isCompleted, e.$id)}
                 className="min-w-[1.5rem]"
                 size="1.4rem"
               />
             ) : (
               <MdOutlineCircle
-                onClick={() => handleIsCompleted(e.isCompleted, e._id)}
+                onClick={() => handleIsCompleted(e.isCompleted, e.$id)}
                 className="min-w-[1.5rem]"
                 size="1.4rem"
               />
@@ -565,18 +655,18 @@ function TaskList({ i, e, todoById, todoId, todoTheme }) {
                 <li className="mb-2 flex flex-row items-center gap-2 border-b-2 pb-2 pr-5 dark:border-black-500">
                   <MdCreateNewFolder size="1.5rem" />
                   <span>
-                    Created at : {new Date(e.taskCreatedAt).toDateString()}
+                    Created at : {new Date(e.$createdAt).toDateString()}
                     {", "}
-                    {new Date(e.taskCreatedAt).toLocaleTimeString()}
+                    {new Date(e.$createdAt).toLocaleTimeString()}
                   </span>
                 </li>
 
                 <li className="flex flex-row items-center gap-2">
                   <MdEditNote size="1.5rem" />
                   <span>
-                    Updated at : {new Date(e.taskUpdatedAt).toDateString()}
+                    Updated at : {new Date(e.updatedAt).toDateString()}
                     {", "}
-                    {new Date(e.taskUpdatedAt).toLocaleTimeString()}
+                    {new Date(e.updatedAt).toLocaleTimeString()}
                   </span>
                 </li>
               </ul>
@@ -586,7 +676,7 @@ function TaskList({ i, e, todoById, todoId, todoTheme }) {
               onClick={() => {
                 setUpdateModal({
                   active: true,
-                  taskId: e._id,
+                  taskId: e.$id,
                 });
               }}
               title="Edit Task"
@@ -594,20 +684,20 @@ function TaskList({ i, e, todoById, todoId, todoTheme }) {
               size="1.5rem"
             />
             <RiDeleteBin6Line
-              onClick={() => deleteTask(e._id)}
+              onClick={() => deleteTask(e.$id)}
               title="Delete Task"
               className="text-red-400 active:scale-90"
               size="1.5rem"
             />
             {e.isImportant ? (
               <MdStar
-                onClick={() => handleIsImportant(e.isImportant, e._id)}
+                onClick={() => handleIsImportant(e.isImportant, e.$id)}
                 size="1.5rem"
                 className={`dark:text-white text-${todoTheme} active:scale-90`}
               />
             ) : (
               <MdStarOutline
-                onClick={() => handleIsImportant(e.isImportant, e._id)}
+                onClick={() => handleIsImportant(e.isImportant, e.$id)}
                 size="1.5rem"
                 className={`dark:text-white text-${todoTheme} active:scale-90`}
               />
@@ -620,8 +710,8 @@ function TaskList({ i, e, todoById, todoId, todoTheme }) {
       <UpdateTask
         updateModal={updateModal}
         setUpdateModal={setUpdateModal}
-        todoId={todoId}
-        todoById={todoById}
+        state={state}
+        getTasks={getTasks}
       />
     </motion.li>
   );
