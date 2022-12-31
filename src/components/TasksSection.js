@@ -664,9 +664,9 @@ function TaskList({ e, getTasks, todoTheme }) {
                 <li className="flex flex-row items-center gap-2">
                   <MdEditNote size="1.5rem" />
                   <span>
-                    Updated at : {new Date(e.updatedAt).toDateString()}
+                    Updated at : {new Date(e.$updatedAt).toDateString()}
                     {", "}
-                    {new Date(e.updatedAt).toLocaleTimeString()}
+                    {new Date(e.$updatedAt).toLocaleTimeString()}
                   </span>
                 </li>
               </ul>

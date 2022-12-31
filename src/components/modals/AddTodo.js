@@ -26,12 +26,17 @@ const containerVarient = {
   },
 };
 
-function AddTodo({ showAddTodo, setShowAddTodo, getTodos, todoId }) {
+function AddTodo({
+  showAddTodo,
+  setShowAddTodo,
+  getTodos,
+  todoId,
+  getTasksInfo,
+}) {
   const titleRef = useRef();
   const taskRef = useRef();
   const [tasks, setTasks] = useState([]);
   const { userInfo, showLoader, hideLoader } = useContext(UserContext);
-  console.log("todoId:", todoId);
 
   // Create Todo
   const createTodo = async () => {
@@ -55,7 +60,7 @@ function AddTodo({ showAddTodo, setShowAddTodo, getTodos, todoId }) {
         console.log(response);
         createTasks();
         getTodos(userInfo);
-
+        getTasksInfo(userInfo);
         titleRef.current.value = "";
         taskRef.current.value = "";
         setTasks([]);
@@ -143,6 +148,7 @@ function AddTodo({ showAddTodo, setShowAddTodo, getTodos, todoId }) {
                 titleRef.current.value = "";
                 taskRef.current.value = "";
                 setShowAddTodo(false);
+                window.location.reload();
               }}
               className="absolute top-6 right-8 active:scale-50"
               size="1.5rem"

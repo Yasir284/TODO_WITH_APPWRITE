@@ -3,11 +3,13 @@ import "./ProgressBar.css";
 import { motion } from "framer-motion";
 import { MdCheck } from "react-icons/md";
 
-function ProgressBar({ percentage }) {
+function ProgressBar({ tasks, tasksDone }) {
   const [count, setCount] = useState(0);
-
   // Loading percentage
+  const percentage = (tasksDone * 100) / tasks;
   useEffect(() => {
+    if (!percentage) return;
+
     let startCount = 0;
     setCount(startCount);
     function loadPercent(percentage) {

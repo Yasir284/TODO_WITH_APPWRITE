@@ -32,9 +32,9 @@ export default function MainSection() {
   const { userInfo, showLoader, hideLoader } = useContext(UserContext);
   const [todos, setTodos] = useState(null);
   const [showAddTodo, setShowAddTodo] = useState(false);
+  const [tasksInfo, setTaskInfo] = useState([]);
   const searchRef = useRef();
   const navigate = useNavigate();
-
   // Getting Todos
   const getTodos = async (userInfo) => {
     const promise = databases.listDocuments(DATABASE_ID, TODO_COLLECTION_ID, [
@@ -87,25 +87,27 @@ export default function MainSection() {
   };
 
   // Get tasks
-  // const getTasksInfo = async (state) => {
-  //   const promise = databases.listDocuments(DATABASE_ID, TASK_COLLECTION_ID, [
-  //     Query.equal("todoId", state.todoId),
-  //   ]);
+  const getTasksInfo = async (userInfo) => {
+    const promise = databases.listDocuments(DATABASE_ID, TASK_COLLECTION_ID, [
+      Query.equal("userId", userInfo.$id),
+      Query.limit(100),
+    ]);
 
-  //   promise.then(
-  //     function (response) {
-  //       console.log(response.documents);
-
-  //     },
-  //     function (error) {
-  //       console.log(error);
-  //       toast("Not able to get tasks", { type: "error" });
-  //     }
-  //   );
-  // };
+    promise.then(
+      function (response) {
+        console.log(response.documents);
+        setTaskInfo(response.documents);
+      },
+      function (error) {
+        console.log(error);
+        toast("Not able to get tasks", { type: "error" });
+      }
+    );
+  };
 
   useEffect(() => {
     getTodos(userInfo);
+    getTasksInfo(userInfo);
   }, [userInfo]);
 
   return (
@@ -154,6 +156,7 @@ export default function MainSection() {
           setTodos={setTodos}
           getTodos={getTodos}
           todoId={uuidv4()}
+          getTasksInfo={getTasksInfo}
         />
 
         {/* Todo List */}
@@ -180,11 +183,26 @@ export default function MainSection() {
                   <div>
                     <h1 className="mb-5 text-2xl font-bold">{todo.title}</h1>
                     <p className="ml-2 mb-1">
-                      🚀 <span>10</span> Tasks
+                      🚀{" "}
+                      <span>
+                        {tasksInfo
+                          ? tasksInfo.filter((task) => task.todoId === todo.$id)
+                              .length
+                          : 0}
+                      </span>{" "}
+                      Tasks
                     </p>
                     <p className="ml-2">
                       🔥
-                      <span>0</span> Done
+                      <span>
+                        {tasksInfo
+                          ? tasksInfo.filter(
+                              (task) =>
+                                task.todoId === todo.$id && task.isCompleted
+                            ).length
+                          : 0}
+                      </span>{" "}
+                      Done
                     </p>
 
                     <div
@@ -201,10 +219,14 @@ export default function MainSection() {
                   </div>
 
                   <ProgressBar
-                    percentage={
-                      0
-                      // (todo.tasks.filter((e) => e.isCompleted).length * 100) /
-                      // todo.tasks.length
+                    tasks={
+                      tasksInfo.filter((task) => task.todoId === todo.$id)
+                        .length
+                    }
+                    tasksDone={
+                      tasksInfo.filter(
+                        (task) => task.todoId === todo.$id && task.isCompleted
+                      ).length
                     }
                   />
                 </div>
