@@ -22,6 +22,7 @@
 - Todo and tasks timestamp.
 - Available in Dark and light mode.
 - Can set todo theme.
+- Search bar to search todos and tasks.
 
 ---
 
