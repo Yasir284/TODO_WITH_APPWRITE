@@ -1,5 +1,4 @@
 ![badge](https://img.shields.io/badge/MADE%20WITH-REACT%20&%20APPWRITE-blue)
-![badge](https://img.shields.io/badge/TIME%20TAKEN-10%20to%2012%20hrs-red)
 [![badge](https://img.shields.io/badge/SEE%20DEMO%20-VISIT-green)](https://todoapp-with-appwrite-by-yasir.netlify.app/)
 
 # Todo app with appwrite
