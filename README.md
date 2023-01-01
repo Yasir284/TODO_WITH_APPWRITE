@@ -8,7 +8,7 @@
 
 - I have hosted this website on netlify, please find the link below:
 
-  [![badge](https://img.shields.io/badge/LINK%20OF-PROJECT-darkviolet)](https://javascript-calculatorapp-project1.netlify.app/)
+  [![badge](https://img.shields.io/badge/LINK%20OF-PROJECT-darkviolet)](https://todoapp-with-appwrite-by-yasir.netlify.app/)
 
 ---
 
