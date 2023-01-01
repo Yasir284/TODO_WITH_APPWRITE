@@ -58,6 +58,10 @@
 
 - I am a frontend developer from Gujarat. I have done my Btech at GTU university and I am currently learning backend-development.
 
+- Connect with me on:
+  - [Linkedin](https://www.linkedin.com/in/yasir-lambawala-2b216a1b9/)
+  - [Instagram](https://www.instagram.com/web_dev_yasir/)
+
 ---
 
 ## Feedback
