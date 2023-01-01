@@ -350,7 +350,7 @@ export default function TasksSection() {
                     setChangeTitle(true);
                     setActive(false);
                   }}
-                  className="flex w-52 flex-row items-center gap-4 rounded-md py-4 pl-6 text-black transition-all duration-200 ease-in-out hover:bg-white-50  dark:text-white dark:hover:bg-black-500"
+                  className="flex w-52 flex-row items-center gap-4 rounded-md py-4 pl-6 text-black transition-all duration-200 ease-in-out hover:bg-white-50 dark:text-white dark:hover:bg-black-500"
                 >
                   <MdEditNote size="1.2rem" />
                   <span>Rename List</span>
@@ -389,7 +389,7 @@ export default function TasksSection() {
           <div className="flex flex-row items-center gap-6">
             <form
               onSubmit={handleSearch}
-              className="flex h-10 flex-row items-center gap-6 rounded-3xl bg-white px-4 shadow-md shadow-slate-200 dark:bg-black-700 dark:shadow-black"
+              className="flex h-10 flex-row items-center gap-6 rounded-3xl bg-white px-4 shadow-md shadow-slate-200 hover:bg-white-50 dark:bg-black-800 dark:shadow-black dark:hover:bg-black-700"
             >
               <input
                 ref={searchRef}
@@ -407,13 +407,13 @@ export default function TasksSection() {
           <input
             ref={taskRef}
             type="text"
-            className="w-full rounded-md bg-white p-3 shadow-md shadow-slate-200 dark:bg-black-700 dark:shadow-black"
+            className="w-full rounded-md bg-white p-3 shadow-md shadow-slate-200 dark:bg-black-800 dark:shadow-black"
             placeholder="Add task"
           />
 
           <button
             type="submit"
-            className="ml-4 rounded-md bg-white px-4 py-[5px] shadow-md shadow-slate-200 transition-all duration-200 ease-in-out active:scale-50 dark:bg-black-700 dark:shadow-black"
+            className="ml-4 rounded-md bg-white px-4 py-[5px] shadow-md shadow-slate-200 transition-all duration-200 ease-in-out active:scale-50 dark:bg-black-800 dark:shadow-black"
           >
             Add
           </button>
@@ -622,7 +622,7 @@ function TaskList({ e, getTasks, todoTheme }) {
         transition: { ease: "easeOut", duration: 0.3 },
       }}
       layoutId={e.$id}
-      className="mb-3 rounded-md bg-white shadow-md shadow-slate-200 dark:bg-black-700 dark:shadow-black"
+      className="mb-3 rounded-md bg-white shadow-md shadow-slate-200 transition-all duration-200 ease-in-out hover:bg-white-50 dark:bg-black-800 dark:shadow-black dark:hover:bg-black-700"
     >
       <motion.div ref={ref}>
         <div
